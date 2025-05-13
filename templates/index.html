@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Similarity Analyzer</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animate.css for animations -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        body {
+            background-color: #f5f7fa;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 1.5rem;
+            font-weight: 600;
+            border-bottom: none;
+        }
+        .form-control, .form-range {
+            border-radius: 10px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.4);
+        }
+        .image-preview {
+            height: 200px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+        }
+        .image-preview img {
+            max-height: 180px;
+            max-width: 100%;
+        }
+        #threshold-display {
+            font-weight: bold;
+            color: #2575fc;
+        }
+        .upload-icon {
+            font-size: 3rem;
+            color: #ccd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="text-center mb-5 animate__animated animate__fadeIn">
+            <i class="fas fa-images me-2"></i> Image Similarity Analyzer
+        </h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show animate__animated animate__fadeInDown" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="card animate__animated animate__fadeInUp">
+            <div class="card-header text-center">
+                <h3><i class="fas fa-cloud-upload-alt me-2"></i> Upload Images to Compare</h3>
+            </div>
+            <div class="card-body p-4">
+                {% if not model_available %}
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Model not loaded! Please make sure the image similarity model is available.
+                    </div>
+                {% endif %}
+                
+                <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data">
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-file-image me-2"></i>First Image</h5>
+                                    <input type="file" class="form-control" id="file1" name="file1" accept="image/*" required onchange="previewImage(this, 'preview1')">
+                                    <div class="image-preview mt-3" id="preview1">
+                                        <i class="fas fa-upload upload-icon"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-file-image me-2"></i>Second Image</h5>
+                                    <input type="file" class="form-control" id="file2" name="file2" accept="image/*" required onchange="previewImage(this, 'preview2')">
+                                    <div class="image-preview mt-3" id="preview2">
+                                        <i class="fas fa-upload upload-icon"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4 animate__animated animate__fadeIn" style="animation-delay: 0.5s;">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-sliders-h me-2"></i> Similarity Threshold</h5>
+                            <p class="text-muted">Adjust the threshold for determining if images are similar. Lower values are more strict.</p>
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <input type="range" class="form-range" id="threshold" name="threshold" min="0.1" max="2.0" step="0.1" value="0.7" oninput="updateThresholdValue(this.value)">
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <span id="threshold-display">0.7</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg animate__animated animate__pulse animate__infinite" style="animation-delay: 1s;">
+                            <i class="fas fa-search me-2"></i> Compare Images
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Preview images when selected
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            preview.innerHTML = '';
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.classList.add('img-fluid', 'animate__animated', 'animate__fadeIn');
+                    preview.appendChild(img);
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                preview.innerHTML = '<i class="fas fa-upload upload-icon"></i>';
+            }
+        }
+        
+        // Update threshold display value
+        function updateThresholdValue(val) {
+            document.getElementById('threshold-display').innerText = val;
+        }
+    </script>
+</body>
+</html> 
